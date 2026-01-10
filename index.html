@@ -2,100 +2,139 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <title>Vòng Quay May Mắn - Server ARK</title>
+  <title>Vòng Quay May Mắn</title>
   <style>
-    body {
+    body{
       font-family: Arial, sans-serif;
-      background: #0b132b;
-      color: white;
-      text-align: center;
+      background:#0b132b;
+      color:white;
+      text-align:center;
     }
-    .box {
-      background: #1c2541;
-      padding: 20px;
-      width: 350px;
-      margin: 50px auto;
-      border-radius: 10px;
+    .wheel-container{
+      position:relative;
+      width:300px;
+      height:300px;
+      margin:40px auto;
     }
-    input, button {
-      padding: 10px;
-      margin: 8px 0;
-      width: 90%;
-      border-radius: 5px;
-      border: none;
+    canvas{
+      background:#fff;
+      border-radius:50%;
     }
-    button {
-      background: #5bc0be;
-      cursor: pointer;
-      font-weight: bold;
+    .pointer{
+      width:0;
+      height:0;
+      border-left:15px solid transparent;
+      border-right:15px solid transparent;
+      border-bottom:30px solid red;
+      position:absolute;
+      top:-25px;
+      left:50%;
+      transform:translateX(-50%);
     }
-    .result {
-      margin-top: 15px;
-      font-size: 18px;
-      color: #ffd166;
+    button{
+      margin-top:20px;
+      padding:10px 20px;
+      font-size:16px;
+      cursor:pointer;
+      border:none;
+      border-radius:5px;
+    }
+    .result{
+      margin-top:15px;
+      font-size:18px;
+      color:#ffd166;
     }
   </style>
 </head>
 <body>
 
-  <div class="box">
-    <h2>🎁 VÒNG QUAY MAY MẮN</h2>
-    <p>Server ARK [TÊN SERVER]</p>
+<h2>🎁 VÒNG QUAY MAY MẮN</h2>
 
-    <input type="text" id="name" placeholder="Tên ingame">
-    <input type="number" id="money" placeholder="Số tiền đã nạp (VNĐ)">
+<div class="wheel-container">
+  <div class="pointer"></div>
+  <canvas id="wheel" width="300" height="300"></canvas>
+</div>
 
-    <button onclick="spin()">QUAY NGAY</button>
+<button onclick="spin()">QUAY NGAY</button>
+<div class="result" id="result"></div>
 
-    <div class="result" id="result"></div>
-  </div>
+<script>
+const rewards = [
+  "Skin khủng long",
+  "1000 Point Shop",
+  "Pet mini",
+  "VIP 7 ngày",
+  "VIP 30 ngày",
+  "Thú huyền thoại"
+];
 
-  <script>
-    // Danh sách phần thưởng
-    const rewards = [
-      { name: "Skin khủng long hiếm", chance: 30 },
-      { name: "1000 Point Shop", chance: 25 },
-      { name: "Pet mini độc quyền", chance: 15 },
-      { name: "VIP 7 ngày", chance: 15 },
-      { name: "VIP 30 ngày", chance: 10 },
-      { name: "Thú huyền thoại", chance: 5 }
-    ];
+const canvas = document.getElementById("wheel");
+const ctx = canvas.getContext("2d");
+const size = canvas.width;
+const center = size / 2;
+const slice = 2 * Math.PI / rewards.length;
+let angle = 0;
+let spinning = false;
 
-    function spin() {
-      const name = document.getElementById("name").value;
-      const money = document.getElementById("money").value;
-      const resultBox = document.getElementById("result");
+// Vẽ vòng quay
+function drawWheel(){
+  for(let i=0;i<rewards.length;i++){
+    ctx.beginPath();
+    ctx.moveTo(center, center);
+    ctx.arc(center, center, center, angle + i*slice, angle + (i+1)*slice);
+    ctx.fillStyle = i % 2 === 0 ? "#3a86ff" : "#8338ec";
+    ctx.fill();
+    ctx.save();
+    ctx.translate(center, center);
+    ctx.rotate(angle + i*slice + slice/2);
+    ctx.textAlign="right";
+    ctx.fillStyle="white";
+    ctx.font="14px Arial";
+    ctx.fillText(rewards[i], center-10, 5);
+    ctx.restore();
+  }
+}
 
-      if (!name || !money) {
-        resultBox.innerHTML = "❌ Vui lòng nhập đủ thông tin!";
-        return;
-      }
+drawWheel();
 
-      if (money < 50000) {
-        resultBox.innerHTML = "❌ Cần nạp tối thiểu 50.000đ để quay!";
-        return;
-      }
+function spin(){
+  if(spinning) return;
+  spinning = true;
+  document.getElementById("result").innerHTML="";
 
-      const reward = randomReward();
-      resultBox.innerHTML = 
-        `🎉 Chúc mừng <b>${name}</b> đã trúng: <br><b>${reward}</b>`;
+  const spinTime = 4000;
+  const finalAngle = Math.random()*360 + 1440; // quay nhiều vòng
+  const start = Date.now();
 
-      // Ở đây bạn có thể:
-      // - Lưu log vào database
-      // - Gửi về Discord webhook
+  function animate(){
+    const now = Date.now();
+    const elapsed = now - start;
+    const progress = Math.min(elapsed / spinTime, 1);
+    const ease = 1 - Math.pow(1 - progress, 3);
+
+    angle = (finalAngle * ease) * Math.PI / 180;
+    ctx.clearRect(0,0,size,size);
+    drawWheel();
+
+    if(progress < 1){
+      requestAnimationFrame(animate);
+    }else{
+      spinning = false;
+      showResult();
     }
+  }
+  animate();
+}
 
-    function randomReward() {
-      let total = 0;
-      rewards.forEach(r => total += r.chance);
+function showResult(){
+  const deg = angle * 180 / Math.PI + 90;
+  const index = rewards.length - Math.floor((deg % 360) / (360 / rewards.length)) - 1;
+  const reward = rewards[(index + rewards.length) % rewards.length];
 
-      let rand = Math.random() * total;
-      for (let r of rewards) {
-        if (rand < r.chance) return r.name;
-        rand -= r.chance;
-      }
-    }
-  </script>
+  document.getElementById("result").innerHTML =
+    "🎉 Bạn trúng: <b>" + reward + "</b>";
+}
+</script>
 
 </body>
 </html>
