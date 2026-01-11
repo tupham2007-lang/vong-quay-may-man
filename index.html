@@ -4,76 +4,94 @@
 <meta charset="UTF-8">
 <title>Vòng Quay May Mắn</title>
 <style>
-  body{font-family:Arial;background:#0b132b;color:white;text-align:center}
-  .wheel-container{position:relative;width:300px;height:300px;margin:30px auto}
-  canvas{background:#fff;border-radius:50%}
-  .pointer{
-    width:0;height:0;
-    border-left:15px solid transparent;
-    border-right:15px solid transparent;
-    border-bottom:30px solid red;
-    position:absolute;top:-25px;left:50%;
-    transform:translateX(-50%);
-  }
-  input,button{padding:8px;margin:6px;border-radius:5px;border:none}
-  .admin-box{background:#1c2541;padding:10px;margin:15px;border-radius:8px}
-  .result{margin-top:10px;font-size:18px;color:#ffd166}
+body{font-family:Arial;background:#0b132b;color:white;text-align:center}
+.wheel-container{position:relative;width:320px;height:320px;margin:20px auto}
+canvas{background:#fff;border-radius:50%}
+.pointer{
+  width:0;height:0;
+  border-left:15px solid transparent;
+  border-right:15px solid transparent;
+  border-bottom:30px solid red;
+  position:absolute;top:-25px;left:50%;
+  transform:translateX(-50%);
+}
+input,button{padding:8px;margin:5px;border-radius:6px;border:none}
+.admin-box{background:#1c2541;padding:10px;margin:15px;border-radius:8px}
+.hidden{display:none}
+.result{margin-top:10px;font-size:18px;color:#ffd166}
 </style>
 </head>
 <body>
 
 <h2>🎁 VÒNG QUAY MAY MẮN</h2>
 
-<!-- KHU ADMIN -->
+<!-- ADMIN -->
 <div class="admin-box">
   <b>👑 KHU ADMIN</b><br>
-  <input type="password" id="adminPass" placeholder="Nhập mã admin">
+  <input type="password" id="adminPass" placeholder="Mã admin">
   <button onclick="loginAdmin()">Đăng nhập</button>
-  <div id="adminPanel" style="display:none;margin-top:8px">
-    <button onclick="allowSpin()">✅ Cho phép người chơi quay</button>
-    <button onclick="lockSpin()">🔒 Khóa quyền quay</button>
-    <p>Trạng thái: <b id="status">Đang khóa</b></p>
+
+  <div id="adminPanel" class="hidden">
+    <p>🔑 <b>Mã quay hiện tại:</b></p>
+    <h3 id="currentCode">----</h3>
+
+    <input id="openCode" placeholder="Nhập mã quay">
+    <button onclick="openOneSpin()">Mở 1 lượt quay</button>
+
+    <p>Trạng thái: <b id="spinStatus">Đang khóa</b></p>
   </div>
 </div>
 
-<!-- NHẬP TÊN -->
-<input type="text" id="playerName" placeholder="Tên người chơi">
+<input id="playerName" placeholder="Tên người chơi">
 
 <div class="wheel-container">
   <div class="pointer"></div>
-  <canvas id="wheel" width="300" height="300"></canvas>
+  <canvas id="wheel" width="320" height="320"></canvas>
 </div>
 
-<button onclick="spin()">QUAY NGAY</button>
+<button onclick="spin()">🎰 QUAY NGAY</button>
 <div class="result" id="result"></div>
 
 <script>
-/* ================== CÀI ĐẶT ================== */
-// 👉 ĐỔI MÃ ADMIN Ở ĐÂY
-const ADMIN_CODE = "123456";
+/* ====== CÀI ĐẶT ====== */
+const ADMIN_CODE = "2007";
+let spinCode = "1000";
+let allowSpin = false;
+let adminLogged = false;
 
-/* ================== PHẦN QUÀ ================== */
+/* ====== PHẦN THƯỞNG + TỈ LỆ ====== */
 const rewards = [
-  "Skin khủng long",
-  "1000 Point Shop",
-  "Pet mini",
-  "VIP 7 ngày",
-  "VIP 30 ngày",
-  "Thú huyền thoại"
+  { name:"1 Quetzal", chance:5 },
+  { name:"1 Giga", chance:5 },
+  { name:"8000 Amber", chance:20 },
+  { name:"1 Cá sấu", chance:10 },
+  { name:"Súng Tek xịn", chance:2 },
+  { name:"Tek Rep", chance:20 },
+  { name:"Shotgun (6 viên)", chance:18 },
+  { name:"Sniper", chance:8 },
+  { name:"GF 400 Speed", chance:2 },
+  { name:"10K Amber", chance:10 }
 ];
 
-/* ================== BIẾN ================== */
-let adminLogged = false;
-let allowUserSpin = false;
-let spinning = false;
-let angle = 0;
+/* ====== RANDOM THEO TỈ LỆ ====== */
+function getRandomReward(){
+  let total = 0;
+  rewards.forEach(r=>total+=r.chance);
+  let rand = Math.random()*total;
+  for(let r of rewards){
+    if(rand < r.chance) return r.name;
+    rand -= r.chance;
+  }
+}
 
-/* ================== VẼ VÒNG QUAY ================== */
+/* ====== VẼ VÒNG QUAY ====== */
 const canvas = document.getElementById("wheel");
 const ctx = canvas.getContext("2d");
 const size = canvas.width;
 const center = size/2;
 const slice = 2*Math.PI/rewards.length;
+let angle = 0;
+let spinning = false;
 
 function drawWheel(){
   ctx.clearRect(0,0,size,size);
@@ -83,49 +101,47 @@ function drawWheel(){
     ctx.arc(center,center,center,angle+i*slice,angle+(i+1)*slice);
     ctx.fillStyle = i%2==0 ? "#3a86ff" : "#8338ec";
     ctx.fill();
+
     ctx.save();
     ctx.translate(center,center);
     ctx.rotate(angle+i*slice+slice/2);
     ctx.fillStyle="white";
+    ctx.font="13px Arial";
     ctx.textAlign="right";
-    ctx.font="14px Arial";
-    ctx.fillText(rewards[i],center-10,5);
+    ctx.fillText(rewards[i].name,center-10,5);
     ctx.restore();
   }
 }
 drawWheel();
 
-/* ================== ADMIN ================== */
+/* ====== ADMIN ====== */
 function loginAdmin(){
   const pass = document.getElementById("adminPass").value;
   if(pass === ADMIN_CODE){
     adminLogged = true;
-    document.getElementById("adminPanel").style.display="block";
-    alert("Đăng nhập admin thành công!");
-  }else{
-    alert("Sai mã admin!");
-  }
+    document.getElementById("adminPanel").classList.remove("hidden");
+    document.getElementById("currentCode").innerText = spinCode;
+    alert("✅ Đăng nhập admin thành công!");
+  }else alert("❌ Sai mã admin!");
 }
 
-function allowSpin(){
-  allowUserSpin = true;
-  document.getElementById("status").innerText="ĐANG MỞ";
+function openOneSpin(){
+  if(!adminLogged) return;
+  const codeInput = document.getElementById("openCode").value;
+  if(codeInput === spinCode){
+    allowSpin = true;
+    document.getElementById("spinStatus").innerText = "ĐANG MỞ (1 lượt)";
+    alert("🎉 Đã mở 1 lượt quay!");
+  }else alert("❌ Sai mã quay!");
 }
 
-function lockSpin(){
-  allowUserSpin = false;
-  document.getElementById("status").innerText="ĐANG KHÓA";
-}
-
-/* ================== QUAY ================== */
+/* ====== QUAY ====== */
 function spin(){
   if(spinning) return;
 
   const name = document.getElementById("playerName").value || "Người chơi";
-
-  // Nếu không phải admin → phải được cho phép
-  if(!adminLogged && !allowUserSpin){
-    alert("❌ Bạn chưa được phép quay! Hãy chờ admin mở quyền.");
+  if(!allowSpin){
+    alert("⛔ Chưa được phép quay!");
     return;
   }
 
@@ -147,23 +163,25 @@ function spin(){
       requestAnimationFrame(animate);
     }else{
       spinning=false;
-      showResult(name);
-      // Sau khi người chơi quay xong → tự khóa lại
-      if(!adminLogged){
-        allowUserSpin=false;
-        document.getElementById("status").innerText="ĐANG KHÓA";
-      }
+
+      const reward = getRandomReward();
+      document.getElementById("result").innerHTML =
+        "🎉 <b>"+name+"</b> trúng: <b>"+reward+"</b>";
+
+      // khóa lại + đổi mã
+      allowSpin = false;
+      document.getElementById("spinStatus").innerText = "Đang khóa";
+      spinCode = generateNewCode();
+      if(adminLogged)
+        document.getElementById("currentCode").innerText = spinCode;
     }
   }
   animate();
 }
 
-function showResult(name){
-  const deg = angle*180/Math.PI + 90;
-  const index = rewards.length - Math.floor((deg%360)/(360/rewards.length)) - 1;
-  const reward = rewards[(index+rewards.length)%rewards.length];
-  document.getElementById("result").innerHTML =
-    "🎉 <b>"+name+"</b> trúng: <b>"+reward+"</b>";
+/* ====== TẠO MÃ MỚI ====== */
+function generateNewCode(){
+  return Math.floor(1000 + Math.random()*9000).toString();
 }
 </script>
 
