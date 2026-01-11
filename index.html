@@ -5,20 +5,20 @@
 <title>Vòng Quay May Mắn</title>
 <style>
 body{font-family:Arial;background:#0b132b;color:white;text-align:center}
-.wheel-container{position:relative;width:320px;height:320px;margin:20px auto}
+.wheel-box{position:relative;width:320px;height:320px;margin:20px auto}
 canvas{background:#fff;border-radius:50%}
 .pointer{
   width:0;height:0;
-  border-left:15px solid transparent;
-  border-right:15px solid transparent;
-  border-bottom:30px solid red;
-  position:absolute;top:-25px;left:50%;
+  border-left:14px solid transparent;
+  border-right:14px solid transparent;
+  border-bottom:28px solid red;
+  position:absolute;top:-24px;left:50%;
   transform:translateX(-50%);
 }
 input,button{padding:8px;margin:5px;border-radius:6px;border:none}
-.admin-box{background:#1c2541;padding:10px;margin:15px;border-radius:8px}
+.admin{background:#1c2541;padding:10px;border-radius:8px;margin:10px}
 .hidden{display:none}
-.result{margin-top:10px;font-size:18px;color:#ffd166}
+#result{margin-top:10px;color:#ffd166;font-size:18px}
 </style>
 </head>
 <body>
@@ -26,37 +26,35 @@ input,button{padding:8px;margin:5px;border-radius:6px;border:none}
 <h2>🎁 VÒNG QUAY MAY MẮN</h2>
 
 <!-- ===== ADMIN ===== -->
-<div class="admin-box">
-  <b>👑 KHU ADMIN</b><br>
+<div class="admin">
+  <b>👑 ADMIN</b><br>
   <input type="password" id="adminPass" placeholder="Mã admin">
   <button onclick="loginAdmin()">Đăng nhập</button>
   <div id="adminPanel" class="hidden">
-    <p>🔑 <b>Mã quay hiện tại:</b></p>
+    <p>Mã quay hiện tại:</p>
     <h3 id="currentCode">----</h3>
   </div>
 </div>
 
-<!-- ===== NGƯỜI CHƠI NHẬP MÃ ===== -->
+<!-- ===== NGƯỜI CHƠI ===== -->
 <div>
-  <input id="userSpinCode" placeholder="Nhập mã quay">
+  <input id="userCode" placeholder="Nhập mã quay">
   <button onclick="verifyCode()">Xác nhận mã</button>
-  <p id="userStatus" style="color:#ffd166"></p>
+  <p id="status" style="color:#ffd166"></p>
 </div>
 
-<input id="playerName" placeholder="Tên người chơi">
-
-<div class="wheel-container">
+<div class="wheel-box">
   <div class="pointer"></div>
   <canvas id="wheel" width="320" height="320"></canvas>
 </div>
 
-<button onclick="spin()">🎰 QUAY NGAY</button>
-<div class="result" id="result"></div>
+<button onclick="spin()">🎰 QUAY</button>
+<div id="result"></div>
 
 <script>
 /* ===== CÀI ĐẶT ===== */
 const ADMIN_CODE = "2007";
-let spinCode = "1000";
+let spinCode = "1000";        // mã quay ban đầu
 let allowSpin = false;
 let adminLogged = false;
 
@@ -74,7 +72,7 @@ const rewards = [
   "10K Amber"
 ];
 
-/* ===== VẼ VÒNG QUAY ===== */
+/* ===== CANVAS ===== */
 const canvas = document.getElementById("wheel");
 const ctx = canvas.getContext("2d");
 const size = canvas.width;
@@ -83,18 +81,19 @@ const slice = 2*Math.PI/rewards.length;
 let angle = 0;
 let spinning = false;
 
+/* ===== VẼ VÒNG QUAY ===== */
 function drawWheel(){
   ctx.clearRect(0,0,size,size);
   for(let i=0;i<rewards.length;i++){
     ctx.beginPath();
     ctx.moveTo(center,center);
-    ctx.arc(center,center,center,angle+i*slice,angle+(i+1)*slice);
+    ctx.arc(center,center,center,i*slice + angle,(i+1)*slice + angle);
     ctx.fillStyle = i%2==0 ? "#3a86ff" : "#8338ec";
     ctx.fill();
 
     ctx.save();
     ctx.translate(center,center);
-    ctx.rotate(angle+i*slice+slice/2);
+    ctx.rotate(i*slice + angle + slice/2);
     ctx.fillStyle="white";
     ctx.font="12px Arial";
     ctx.textAlign="right";
@@ -117,13 +116,14 @@ function loginAdmin(){
 
 /* ===== NGƯỜI CHƠI NHẬP MÃ ===== */
 function verifyCode(){
-  const input = document.getElementById("userSpinCode").value;
+  const input = document.getElementById("userCode").value.trim();
   if(input === spinCode){
     allowSpin = true;
-    document.getElementById("userStatus").innerText =
+    document.getElementById("status").innerText =
       "✅ Mã hợp lệ! Bạn được quay 1 lần.";
   }else{
-    document.getElementById("userStatus").innerText =
+    allowSpin = false;
+    document.getElementById("status").innerText =
       "❌ Mã không đúng!";
   }
 }
@@ -132,7 +132,7 @@ function verifyCode(){
 function spin(){
   if(spinning) return;
   if(!allowSpin){
-    alert("⛔ Bạn chưa được phép quay! Nhập mã quay trước.");
+    alert("⛔ Nhập mã quay trước!");
     return;
   }
 
@@ -140,15 +140,15 @@ function spin(){
   document.getElementById("result").innerHTML="";
 
   const spinTime = 4000;
-
-  // chọn ô trúng thật sự
   const winIndex = Math.floor(Math.random()*rewards.length);
 
-  // góc cần dừng để mũi tên trỏ đúng ô
-  const stopAngle =
-    2*Math.PI - (winIndex*slice + slice/2);
+  // canvas vẽ từ 3h, mũi tên ở 12h → bù 90°
+  const pointerOffset = Math.PI/2;
 
-  const finalAngle = stopAngle + 6*2*Math.PI; // quay thêm 6 vòng
+  const stopAngle =
+    (2*Math.PI) - (winIndex*slice + slice/2) + pointerOffset;
+
+  const finalAngle = stopAngle + 6*2*Math.PI;
   const start = Date.now();
   const startAngle = angle;
 
@@ -164,18 +164,20 @@ function spin(){
     }else{
       spinning=false;
 
-      const reward = rewards[winIndex];
       document.getElementById("result").innerHTML =
-        "🎉 Trúng: <b>"+reward+"</b>";
+        "🎉 Trúng: <b>"+rewards[winIndex]+"</b>";
 
-      // khóa + đổi mã
+      // khóa lượt
       allowSpin = false;
-      document.getElementById("userStatus").innerText =
-        "🔒 Lượt quay đã dùng xong.";
+      document.getElementById("status").innerText =
+        "🔒 Đã dùng lượt. Nhập mã mới để quay tiếp.";
 
+      // tạo mã mới
       spinCode = generateNewCode();
       if(adminLogged)
         document.getElementById("currentCode").innerText = spinCode;
+
+      document.getElementById("userCode").value="";
     }
   }
   animate();
