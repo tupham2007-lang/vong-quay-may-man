@@ -54,7 +54,7 @@ input,button{padding:8px;margin:5px;border-radius:6px;border:none}
 <script>
 /* ===== CÀI ĐẶT ===== */
 const ADMIN_CODE = "2007";
-let spinCode = "1000";        // mã quay ban đầu
+let spinCode = "1000";     // mã quay ban đầu
 let allowSpin = false;
 let adminLogged = false;
 
@@ -117,8 +117,12 @@ function loginAdmin(){
 /* ===== NGƯỜI CHƠI NHẬP MÃ ===== */
 function verifyCode(){
   const input = document.getElementById("userCode").value.trim();
+
   if(input === spinCode){
+    // RESET TRẠNG THÁI MỖI LẦN NHẬP ĐÚNG
     allowSpin = true;
+    spinning = false;
+
     document.getElementById("status").innerText =
       "✅ Mã hợp lệ! Bạn được quay 1 lần.";
   }else{
@@ -167,12 +171,13 @@ function spin(){
       document.getElementById("result").innerHTML =
         "🎉 Trúng: <b>"+rewards[winIndex]+"</b>";
 
-      // khóa lượt
+      /* ===== RESET + ĐỔI MÃ ===== */
       allowSpin = false;
+      spinning = false;
+
       document.getElementById("status").innerText =
         "🔒 Đã dùng lượt. Nhập mã mới để quay tiếp.";
 
-      // tạo mã mới
       spinCode = generateNewCode();
       if(adminLogged)
         document.getElementById("currentCode").innerText = spinCode;
