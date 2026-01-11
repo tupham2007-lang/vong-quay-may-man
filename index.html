@@ -19,6 +19,8 @@ input,button{padding:8px;margin:5px;border-radius:6px;border:none}
 .admin{background:#1c2541;padding:10px;border-radius:8px;margin:10px}
 .hidden{display:none}
 #result{margin-top:10px;color:#ffd166;font-size:18px}
+#history{list-style:none;padding-left:10px}
+#history li{margin:4px 0;font-size:14px}
 </style>
 </head>
 <body>
@@ -51,12 +53,21 @@ input,button{padding:8px;margin:5px;border-radius:6px;border:none}
 <button onclick="spin()">🎰 QUAY</button>
 <div id="result"></div>
 
+<!-- ===== LỊCH SỬ ===== -->
+<div class="admin" style="margin-top:15px">
+  <b>📜 LỊCH SỬ QUAY</b>
+  <ul id="history" style="text-align:left;max-height:200px;overflow:auto;"></ul>
+</div>
+
 <script>
 /* ===== CÀI ĐẶT ===== */
 const ADMIN_CODE = "2007";
 let spinCode = "1000";     // mã quay ban đầu
 let allowSpin = false;
 let adminLogged = false;
+
+/* ===== LỊCH SỬ ===== */
+let historyList = [];
 
 /* ===== PHẦN THƯỞNG ===== */
 const rewards = [
@@ -119,10 +130,8 @@ function verifyCode(){
   const input = document.getElementById("userCode").value.trim();
 
   if(input === spinCode){
-    // RESET TRẠNG THÁI MỖI LẦN NHẬP ĐÚNG
     allowSpin = true;
     spinning = false;
-
     document.getElementById("status").innerText =
       "✅ Mã hợp lệ! Bạn được quay 1 lần.";
   }else{
@@ -168,8 +177,15 @@ function spin(){
     }else{
       spinning=false;
 
+      const reward = rewards[winIndex];
       document.getElementById("result").innerHTML =
-        "🎉 Trúng: <b>"+rewards[winIndex]+"</b>";
+        "🎉 Trúng: <b>"+reward+"</b>";
+
+      /* ===== LƯU LỊCH SỬ ===== */
+      const time = new Date().toLocaleString();
+      historyList.unshift("🕒 " + time + " — Trúng: " + reward);
+      if(historyList.length > 20) historyList.pop();
+      renderHistory();
 
       /* ===== RESET + ĐỔI MÃ ===== */
       allowSpin = false;
@@ -186,6 +202,17 @@ function spin(){
     }
   }
   animate();
+}
+
+/* ===== HIỂN THỊ LỊCH SỬ ===== */
+function renderHistory(){
+  const ul = document.getElementById("history");
+  ul.innerHTML="";
+  historyList.forEach(item=>{
+    const li = document.createElement("li");
+    li.textContent = item;
+    ul.appendChild(li);
+  });
 }
 
 /* ===== TẠO MÃ MỚI ===== */
