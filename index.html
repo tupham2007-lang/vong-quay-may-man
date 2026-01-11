@@ -25,21 +25,22 @@ input,button{padding:8px;margin:5px;border-radius:6px;border:none}
 
 <h2>🎁 VÒNG QUAY MAY MẮN</h2>
 
-<!-- ADMIN -->
+<!-- ===== ADMIN ===== -->
 <div class="admin-box">
   <b>👑 KHU ADMIN</b><br>
   <input type="password" id="adminPass" placeholder="Mã admin">
   <button onclick="loginAdmin()">Đăng nhập</button>
-
   <div id="adminPanel" class="hidden">
     <p>🔑 <b>Mã quay hiện tại:</b></p>
     <h3 id="currentCode">----</h3>
-
-    <input id="openCode" placeholder="Nhập mã quay">
-    <button onclick="openOneSpin()">Mở 1 lượt quay</button>
-
-    <p>Trạng thái: <b id="spinStatus">Đang khóa</b></p>
   </div>
+</div>
+
+<!-- ===== NGƯỜI CHƠI NHẬP MÃ ===== -->
+<div>
+  <input id="userSpinCode" placeholder="Nhập mã quay">
+  <button onclick="verifyCode()">Xác nhận mã</button>
+  <p id="userStatus" style="color:#ffd166"></p>
 </div>
 
 <input id="playerName" placeholder="Tên người chơi">
@@ -53,38 +54,27 @@ input,button{padding:8px;margin:5px;border-radius:6px;border:none}
 <div class="result" id="result"></div>
 
 <script>
-/* ====== CÀI ĐẶT ====== */
+/* ===== CÀI ĐẶT ===== */
 const ADMIN_CODE = "2007";
 let spinCode = "1000";
 let allowSpin = false;
 let adminLogged = false;
 
-/* ====== PHẦN THƯỞNG + TỈ LỆ ====== */
+/* ===== PHẦN THƯỞNG ===== */
 const rewards = [
-  { name:"1 Quetzal", chance:5 },
-  { name:"1 Giga", chance:5 },
-  { name:"8000 Amber", chance:20 },
-  { name:"1 Cá sấu", chance:10 },
-  { name:"Súng Tek xịn", chance:2 },
-  { name:"Tek Rep", chance:20 },
-  { name:"Shotgun (6 viên)", chance:18 },
-  { name:"Sniper", chance:8 },
-  { name:"GF 400 Speed", chance:2 },
-  { name:"10K Amber", chance:10 }
+  "1 Quetzal",
+  "1 Giga",
+  "8000 Amber",
+  "1 Cá sấu",
+  "Súng Tek xịn",
+  "Tek Rep",
+  "Shotgun (6 viên)",
+  "Sniper",
+  "GF 400 Speed",
+  "10K Amber"
 ];
 
-/* ====== RANDOM THEO TỈ LỆ ====== */
-function getRandomReward(){
-  let total = 0;
-  rewards.forEach(r=>total+=r.chance);
-  let rand = Math.random()*total;
-  for(let r of rewards){
-    if(rand < r.chance) return r.name;
-    rand -= r.chance;
-  }
-}
-
-/* ====== VẼ VÒNG QUAY ====== */
+/* ===== VẼ VÒNG QUAY ===== */
 const canvas = document.getElementById("wheel");
 const ctx = canvas.getContext("2d");
 const size = canvas.width;
@@ -106,15 +96,15 @@ function drawWheel(){
     ctx.translate(center,center);
     ctx.rotate(angle+i*slice+slice/2);
     ctx.fillStyle="white";
-    ctx.font="13px Arial";
+    ctx.font="12px Arial";
     ctx.textAlign="right";
-    ctx.fillText(rewards[i].name,center-10,5);
+    ctx.fillText(rewards[i],center-10,5);
     ctx.restore();
   }
 }
 drawWheel();
 
-/* ====== ADMIN ====== */
+/* ===== ADMIN ===== */
 function loginAdmin(){
   const pass = document.getElementById("adminPass").value;
   if(pass === ADMIN_CODE){
@@ -125,23 +115,24 @@ function loginAdmin(){
   }else alert("❌ Sai mã admin!");
 }
 
-function openOneSpin(){
-  if(!adminLogged) return;
-  const codeInput = document.getElementById("openCode").value;
-  if(codeInput === spinCode){
+/* ===== NGƯỜI CHƠI NHẬP MÃ ===== */
+function verifyCode(){
+  const input = document.getElementById("userSpinCode").value;
+  if(input === spinCode){
     allowSpin = true;
-    document.getElementById("spinStatus").innerText = "ĐANG MỞ (1 lượt)";
-    alert("🎉 Đã mở 1 lượt quay!");
-  }else alert("❌ Sai mã quay!");
+    document.getElementById("userStatus").innerText =
+      "✅ Mã hợp lệ! Bạn được quay 1 lần.";
+  }else{
+    document.getElementById("userStatus").innerText =
+      "❌ Mã không đúng!";
+  }
 }
 
-/* ====== QUAY ====== */
+/* ===== QUAY ===== */
 function spin(){
   if(spinning) return;
-
-  const name = document.getElementById("playerName").value || "Người chơi";
   if(!allowSpin){
-    alert("⛔ Chưa được phép quay!");
+    alert("⛔ Bạn chưa được phép quay! Nhập mã quay trước.");
     return;
   }
 
@@ -149,14 +140,23 @@ function spin(){
   document.getElementById("result").innerHTML="";
 
   const spinTime = 4000;
-  const finalAngle = Math.random()*360 + 1440;
+
+  // chọn ô trúng thật sự
+  const winIndex = Math.floor(Math.random()*rewards.length);
+
+  // góc cần dừng để mũi tên trỏ đúng ô
+  const stopAngle =
+    2*Math.PI - (winIndex*slice + slice/2);
+
+  const finalAngle = stopAngle + 6*2*Math.PI; // quay thêm 6 vòng
   const start = Date.now();
+  const startAngle = angle;
 
   function animate(){
     const now = Date.now();
     const progress = Math.min((now-start)/spinTime,1);
     const ease = 1 - Math.pow(1-progress,3);
-    angle = (finalAngle*ease)*Math.PI/180;
+    angle = startAngle + (finalAngle-startAngle)*ease;
     drawWheel();
 
     if(progress<1){
@@ -164,13 +164,15 @@ function spin(){
     }else{
       spinning=false;
 
-      const reward = getRandomReward();
+      const reward = rewards[winIndex];
       document.getElementById("result").innerHTML =
-        "🎉 <b>"+name+"</b> trúng: <b>"+reward+"</b>";
+        "🎉 Trúng: <b>"+reward+"</b>";
 
-      // khóa lại + đổi mã
+      // khóa + đổi mã
       allowSpin = false;
-      document.getElementById("spinStatus").innerText = "Đang khóa";
+      document.getElementById("userStatus").innerText =
+        "🔒 Lượt quay đã dùng xong.";
+
       spinCode = generateNewCode();
       if(adminLogged)
         document.getElementById("currentCode").innerText = spinCode;
@@ -179,7 +181,7 @@ function spin(){
   animate();
 }
 
-/* ====== TẠO MÃ MỚI ====== */
+/* ===== TẠO MÃ MỚI ===== */
 function generateNewCode(){
   return Math.floor(1000 + Math.random()*9000).toString();
 }
