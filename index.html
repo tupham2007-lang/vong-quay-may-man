@@ -1,54 +1,43 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <title>Vòng Quay May Mắn</title>
-  <style>
-    body{
-      font-family: Arial, sans-serif;
-      background:#0b132b;
-      color:white;
-      text-align:center;
-    }
-    .wheel-container{
-      position:relative;
-      width:300px;
-      height:300px;
-      margin:40px auto;
-    }
-    canvas{
-      background:#fff;
-      border-radius:50%;
-    }
-    .pointer{
-      width:0;
-      height:0;
-      border-left:15px solid transparent;
-      border-right:15px solid transparent;
-      border-bottom:30px solid red;
-      position:absolute;
-      top:-25px;
-      left:50%;
-      transform:translateX(-50%);
-    }
-    button{
-      margin-top:20px;
-      padding:10px 20px;
-      font-size:16px;
-      cursor:pointer;
-      border:none;
-      border-radius:5px;
-    }
-    .result{
-      margin-top:15px;
-      font-size:18px;
-      color:#ffd166;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Vòng Quay May Mắn</title>
+<style>
+  body{font-family:Arial;background:#0b132b;color:white;text-align:center}
+  .wheel-container{position:relative;width:300px;height:300px;margin:30px auto}
+  canvas{background:#fff;border-radius:50%}
+  .pointer{
+    width:0;height:0;
+    border-left:15px solid transparent;
+    border-right:15px solid transparent;
+    border-bottom:30px solid red;
+    position:absolute;top:-25px;left:50%;
+    transform:translateX(-50%);
+  }
+  input,button{padding:8px;margin:6px;border-radius:5px;border:none}
+  .admin-box{background:#1c2541;padding:10px;margin:15px;border-radius:8px}
+  .result{margin-top:10px;font-size:18px;color:#ffd166}
+</style>
 </head>
 <body>
 
 <h2>🎁 VÒNG QUAY MAY MẮN</h2>
+
+<!-- KHU ADMIN -->
+<div class="admin-box">
+  <b>👑 KHU ADMIN</b><br>
+  <input type="password" id="adminPass" placeholder="Nhập mã admin">
+  <button onclick="loginAdmin()">Đăng nhập</button>
+  <div id="adminPanel" style="display:none;margin-top:8px">
+    <button onclick="allowSpin()">✅ Cho phép người chơi quay</button>
+    <button onclick="lockSpin()">🔒 Khóa quyền quay</button>
+    <p>Trạng thái: <b id="status">Đang khóa</b></p>
+  </div>
+</div>
+
+<!-- NHẬP TÊN -->
+<input type="text" id="playerName" placeholder="Tên người chơi">
 
 <div class="wheel-container">
   <div class="pointer"></div>
@@ -59,6 +48,11 @@
 <div class="result" id="result"></div>
 
 <script>
+/* ================== CÀI ĐẶT ================== */
+// 👉 ĐỔI MÃ ADMIN Ở ĐÂY
+const ADMIN_CODE = "123456";
+
+/* ================== PHẦN QUÀ ================== */
 const rewards = [
   "Skin khủng long",
   "1000 Point Shop",
@@ -68,71 +62,108 @@ const rewards = [
   "Thú huyền thoại"
 ];
 
+/* ================== BIẾN ================== */
+let adminLogged = false;
+let allowUserSpin = false;
+let spinning = false;
+let angle = 0;
+
+/* ================== VẼ VÒNG QUAY ================== */
 const canvas = document.getElementById("wheel");
 const ctx = canvas.getContext("2d");
 const size = canvas.width;
-const center = size / 2;
-const slice = 2 * Math.PI / rewards.length;
-let angle = 0;
-let spinning = false;
+const center = size/2;
+const slice = 2*Math.PI/rewards.length;
 
-// Vẽ vòng quay
 function drawWheel(){
+  ctx.clearRect(0,0,size,size);
   for(let i=0;i<rewards.length;i++){
     ctx.beginPath();
-    ctx.moveTo(center, center);
-    ctx.arc(center, center, center, angle + i*slice, angle + (i+1)*slice);
-    ctx.fillStyle = i % 2 === 0 ? "#3a86ff" : "#8338ec";
+    ctx.moveTo(center,center);
+    ctx.arc(center,center,center,angle+i*slice,angle+(i+1)*slice);
+    ctx.fillStyle = i%2==0 ? "#3a86ff" : "#8338ec";
     ctx.fill();
     ctx.save();
-    ctx.translate(center, center);
-    ctx.rotate(angle + i*slice + slice/2);
-    ctx.textAlign="right";
+    ctx.translate(center,center);
+    ctx.rotate(angle+i*slice+slice/2);
     ctx.fillStyle="white";
+    ctx.textAlign="right";
     ctx.font="14px Arial";
-    ctx.fillText(rewards[i], center-10, 5);
+    ctx.fillText(rewards[i],center-10,5);
     ctx.restore();
   }
 }
-
 drawWheel();
 
+/* ================== ADMIN ================== */
+function loginAdmin(){
+  const pass = document.getElementById("adminPass").value;
+  if(pass === ADMIN_CODE){
+    adminLogged = true;
+    document.getElementById("adminPanel").style.display="block";
+    alert("Đăng nhập admin thành công!");
+  }else{
+    alert("Sai mã admin!");
+  }
+}
+
+function allowSpin(){
+  allowUserSpin = true;
+  document.getElementById("status").innerText="ĐANG MỞ";
+}
+
+function lockSpin(){
+  allowUserSpin = false;
+  document.getElementById("status").innerText="ĐANG KHÓA";
+}
+
+/* ================== QUAY ================== */
 function spin(){
   if(spinning) return;
+
+  const name = document.getElementById("playerName").value || "Người chơi";
+
+  // Nếu không phải admin → phải được cho phép
+  if(!adminLogged && !allowUserSpin){
+    alert("❌ Bạn chưa được phép quay! Hãy chờ admin mở quyền.");
+    return;
+  }
+
   spinning = true;
   document.getElementById("result").innerHTML="";
 
   const spinTime = 4000;
-  const finalAngle = Math.random()*360 + 1440; // quay nhiều vòng
+  const finalAngle = Math.random()*360 + 1440;
   const start = Date.now();
 
   function animate(){
     const now = Date.now();
-    const elapsed = now - start;
-    const progress = Math.min(elapsed / spinTime, 1);
-    const ease = 1 - Math.pow(1 - progress, 3);
-
-    angle = (finalAngle * ease) * Math.PI / 180;
-    ctx.clearRect(0,0,size,size);
+    const progress = Math.min((now-start)/spinTime,1);
+    const ease = 1 - Math.pow(1-progress,3);
+    angle = (finalAngle*ease)*Math.PI/180;
     drawWheel();
 
-    if(progress < 1){
+    if(progress<1){
       requestAnimationFrame(animate);
     }else{
-      spinning = false;
-      showResult();
+      spinning=false;
+      showResult(name);
+      // Sau khi người chơi quay xong → tự khóa lại
+      if(!adminLogged){
+        allowUserSpin=false;
+        document.getElementById("status").innerText="ĐANG KHÓA";
+      }
     }
   }
   animate();
 }
 
-function showResult(){
-  const deg = angle * 180 / Math.PI + 90;
-  const index = rewards.length - Math.floor((deg % 360) / (360 / rewards.length)) - 1;
-  const reward = rewards[(index + rewards.length) % rewards.length];
-
+function showResult(name){
+  const deg = angle*180/Math.PI + 90;
+  const index = rewards.length - Math.floor((deg%360)/(360/rewards.length)) - 1;
+  const reward = rewards[(index+rewards.length)%rewards.length];
   document.getElementById("result").innerHTML =
-    "🎉 Bạn trúng: <b>" + reward + "</b>";
+    "🎉 <b>"+name+"</b> trúng: <b>"+reward+"</b>";
 }
 </script>
 
